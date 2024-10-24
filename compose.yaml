@@ -1,0 +1,36 @@
+services:
+  my-server:
+    build: .
+    ports:
+      - 8080:8080
+    # my-db의 컨테이너가 생성되고 healthy 하다고 판단 될 때, 해당 컨테이너를 생성한다.
+    depends_on:
+      my-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+  my-db:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: mydb # MySQL 최초 실행 시 mydb라는 데이터베이스를 생성해준다.
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    ports:
+      - 3306:3306
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping" ] # MySQL이 healthy 한 지 판단할 수 있는 명령어
+      interval: 5s # 5초 간격으로 체크
+      retries: 10 # 10번까지 재시도
+
+  redis-refresh-token:
+    image: redis:alpine
+    command: redis-server /usr/local/etc/redis-refresh-token/redis.conf --requirepass redispassword
+    ports:
+      - 6379:6379
+    volumes:
+      - ./data/refresh-token-data:/data
+      - ./data/refresh-token-data/redis.conf:/usr/local/etc/redis-refresh-token/redis.conf
